@@ -4,16 +4,30 @@ Install Jenkins on CentOS 6.5
 Jenkins 需要有Java Runtime Environment (JRE)才能執行, 所以
 要確認系統上JAVA的執行環境
 
-安裝Jenkins
+安裝Jenkins目前發現應該有三種方式:
+
+第一種:
 新增 Jenkins repository 到 yum repos 即可使用yum來安裝
 sudo wget -O /etc/yum.repos.d/jenkins.repo http://pkg.jenkins-ci.org/redhat/jenkins.repo
 sudo rpm --import https://jenkins-ci.org/redhat/jenkins-ci.org.key
 sudo yum install -y jenkins
 
 確認安裝狀態
-1. tail -f /etc/passwd, 會發現新使用者, jenkins 被建立了, 且使用者家目錄在
+1. 系統被安裝在哪些地方
+   [root@srv ~]# rpm -ql jenkins
+   /etc/init.d/jenkins
+   /etc/logrotate.d/jenkins
+   /etc/sysconfig/jenkins        <== 配置檔
+   /usr/lib/jenkins
+   /usr/lib/jenkins/jenkins.war
+   /usr/sbin/rcjenkins
+   /var/cache/jenkins
+   /var/lib/jenkins              <== JENKINS_HOME
+   /var/log/jenkins              <== Log file
+   
+2. tail -f /etc/passwd, 會發現新使用者, jenkins 被建立了, 且使用者家目錄在
    /var/lib/jenkins
-2. $JENKINS_HOME環境變數於/etc/sysconfig/jenkins中, 被設定在/var/lib/jenkins
+3. $JENKINS_HOME環境變數於/etc/sysconfig/jenkins中, 被設定在/var/lib/jenkins
 
 Jenkins 相關設定
 1. 確認防火牆有打開 80及8090 PORT
@@ -22,12 +36,16 @@ Jenkins 相關設定
 3. 編輯Jenkins URL的prefix, 設定使用 http://{your_ip}/jenkins的方式來存取Jenkins網站,
    編輯/etc/sysconfig/jenkins 加上 JENKINS_ARGS="--prefix=/jenkins"
 4. 修改 default port 8080, 8080 port可能已被其他系統佔用, 故修改成8090
-   編輯/etc/sysconfig/jenkins, JENKINS_PORT="8090"
+   編輯/etc/sysconfig/jenkins, JENKINS_PORT="8090", 另外,
+   JENKINS_AJP_PORT 是否需要修改, 我感到懷疑, AJP似乎是Apache 與 tomcat connect的port,
+5. 到此若沒有使用apache httpd server的話, 只要將jenkins啟動, service jenkins start,
+   http://{ip:8090}/jenkins 應該可以看到畫面了, 若是沒有設定prefix的話,
+   http://{ip:8090} 應該就看得到畫面了
    
 Apache httpd 相關設定
-使用Apache當成 Reverse Proxy, 把{IP}/jenkins/以下的連線轉到Jenkins server指定的port 8090
+若使用Apache當成 Reverse Proxy, 把{IP}/jenkins/以下的連線轉到Jenkins server指定的port 8090
 設定 /etc/httpd/conf/httpd.conf
-ProxyPass      /jenkins    http://localhost:8090/jenkins
+ProxyPass           /jenkins    http://localhost:8090/jenkins
 ProxyPassReverse    /jenkins    http://localhost:8090/jenkins
 ProxyRequests       off
 <Proxy http://localhost:8090/jenkins*>
@@ -47,5 +65,6 @@ service jenkins start
    被掛在${JENKINS_HOME}/jobs/底下, 擔心之後build系統的空間會不夠,
    若自行建立jenkins使用者不會被覆蓋掉, 則就考慮/home底下空間夠不夠大,
    不然就是直接修改JENKINS_HOME的位置
- 
+3. JENKINS_AJP_PORT 不知是不是apache httpd + tomcat時, apache 跟tomcat溝通用的port?? 
 
+第二種:
