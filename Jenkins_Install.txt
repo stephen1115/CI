@@ -1,3 +1,51 @@
 Install Jenkins on CentOS 6.5
 
+安裝環境確認
+Jenkins 需要有Java Runtime Environment (JRE)才能執行, 所以
+要確認系統上JAVA的執行環境
+
+安裝Jenkins
+新增 Jenkins repository 到 yum repos 即可使用yum來安裝
+sudo wget -O /etc/yum.repos.d/jenkins.repo http://pkg.jenkins-ci.org/redhat/jenkins.repo
+sudo rpm --import https://jenkins-ci.org/redhat/jenkins-ci.org.key
+sudo yum install -y jenkins
+
+確認安裝狀態
+1. tail -f /etc/passwd, 會發現新使用者, jenkins 被建立了, 且使用者家目錄在
+   /var/lib/jenkins
+2. $JENKINS_HOME環境變數於/etc/sysconfig/jenkins中, 被設定在/var/lib/jenkins
+
+Jenkins 相關設定
+1. 確認防火牆有打開 80及8090 PORT
+2. 設定Jenkins開機自動啟動
+   chkconfig jenkins on
+3. 編輯Jenkins URL的prefix, 設定使用 http://{your_ip}/jenkins的方式來存取Jenkins網站,
+   編輯/etc/sysconfig/jenkins 加上 JENKINS_ARGS="--prefix=/jenkins"
+4. 修改 default port 8080, 8080 port可能已被其他系統佔用, 故修改成8090
+   編輯/etc/sysconfig/jenkins, JENKINS_PORT="8090"
+   
+Apache httpd 相關設定
+使用Apache當成 Reverse Proxy, 把{IP}/jenkins/以下的連線轉到Jenkins server指定的port 8090
+設定 /etc/httpd/conf/httpd.conf
+ProxyPass      /jenkins    http://localhost:8090/jenkins
+ProxyPassReverse    /jenkins    http://localhost:8090/jenkins
+ProxyRequests       off
+<Proxy http://localhost:8090/jenkins*>
+    Order deny,allow
+	Allow from all
+</Proxy>
+
+啟動Jenkins
+service httpd restart
+service jenkins start
+
+待確認問題
+1. 因為使用YUM自動安裝的方式, 會自動建立jenkins使用者, 並且將家目錄設定於
+   /usr/lib/jenkins; 若於安裝前就先把jenkins使用者建立完成並指定好家目錄, 
+   不知是否會被覆蓋
+2. 由於自動安裝是將JENKINS_HOME環境變數指定在/usr/lib/jenkins, 又workspace會
+   被掛在${JENKINS_HOME}/jobs/底下, 擔心之後build系統的空間會不夠,
+   若自行建立jenkins使用者不會被覆蓋掉, 則就考慮/home底下空間夠不夠大,
+   不然就是直接修改JENKINS_HOME的位置
+ 
 
